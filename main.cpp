@@ -2,7 +2,36 @@
 #include <random>
 #include <chrono>
 #include <thread>
+#include <termios.h>
+#include <sys/select.h>
+
+
 using namespace std;
+
+enum eDirection { STOP, UP, DOWN, LEFT, RIGHT };
+
+termios oldt, newt;
+void initTermios()
+{
+    tcgetattr(0, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(0, TCSANOW, &newt);
+}
+
+void resetTermios()
+{
+    tcsetattr(0, TCSANOW, &oldt);
+}
+
+int kbhit()
+{
+    timeval tv = { 0, 0 };
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(0, &fds);
+    return select(1, &fds, NULL, NULL, &tv) > 0;
+}
 
 void Draw(char* ptrMap,
     short X,
@@ -15,47 +44,90 @@ void Draw(char* ptrMap,
     char* map
     )
 {
-    while (true)
+    ptrMap = map;
+    for (int y = 0; y <= Y; y++)
     {
-        ptrMap = map;
-        for (int y = 0; y <= Y; y++)
+        for (int x = 0; x <= X; x++)
         {
-            for (int x = 0; x <= X; x++)
+            if (y == 0 || y == Y || x == 0 || x == X)
             {
-                if (y == 0 || y == Y || x == 0 || x == X)
+                *(ptrMap++) = '#';
+                if (x == X)
                 {
-                    *(ptrMap++) = '#';
-                    if (x == X)
-                    {
-                        *(ptrMap++) = '\n';
-                    }
-                }
-                else if (y == snakeHeadY && x == snakeHeadX)
-                {
-                    *(ptrMap++) = 'O';
-                }
-                else if (y == fruitHeadY && x == fruitHeadX)
-                {
-                    *(ptrMap++) = 'F';
-                }
-                else
-                {
-                    *(ptrMap++) = ' ';
+                    *(ptrMap++) = '\n';
                 }
             }
+            else if (y == snakeHeadY && x == snakeHeadX)
+            {
+                *(ptrMap++) = 'O';
+            }
+            else if (y == fruitHeadY && x == fruitHeadX)
+            {
+                *(ptrMap++) = 'F';
+            }
+            else
+            {
+                *(ptrMap++) = ' ';
+            }
         }
+    }
         *(ptrMap++) = '\0';
         this_thread::sleep_for(chrono::milliseconds(1000/FPS));
         cout << "\033[2J\033[1;1H"<<map;
+}
+
+void buttonPressed(char& dir)
+{
+    if (kbhit())
+    {
+        switch (getchar())
+        {
+            case 'a':
+            case 'A':
+                dir = eDirection::LEFT;
+                break;
+            case 'd':
+            case 'D':
+                dir = eDirection::RIGHT;
+                break;
+            case 'w':
+            case 'W':
+                dir = eDirection::UP;
+                break;
+            case 's':
+            case 'S':
+                dir = eDirection::DOWN;
+                break;
+        }
+    }
+}
+
+void changeDirection(char& dir, char& snakeHeadX, char& snakeHeadY)
+{
+    switch (dir)
+    {
+        case eDirection::LEFT:
+            snakeHeadX--;
+            break;
+        case eDirection::RIGHT:
+            snakeHeadX++;
+            break;
+        case eDirection::UP:
+            snakeHeadY--;
+            break;
+        case eDirection::DOWN:
+            snakeHeadY++;
+            break;
     }
 }
 
 int main()
 {
+    initTermios();
     const char FPS = 30;
 
-    const char mapX = 10;
-    const char mapY = 10;
+    const char mapX = 50;
+    const char mapY = 50;
     char* map = new char[(mapX+2)*(mapY+2)];
     char* ptrMap = map;
 
@@ -76,8 +148,16 @@ int main()
     fruitHeadX = distX(mt);
     fruitHeadY = distY(mt);
 
-    Draw(ptrMap, mapX, mapY, snakeHeadX, snakeHeadY, fruitHeadX, fruitHeadY, FPS, map);
+    char dir = eDirection::STOP;
+
+    while (true)
+    {
+        buttonPressed(dir);
+        changeDirection(dir, snakeHeadX, snakeHeadY);
+        Draw(ptrMap, mapX, mapY, snakeHeadX, snakeHeadY, fruitHeadX, fruitHeadY, FPS, map);
+    }
 
     delete[] map;
+    resetTermios();
     return 0;
 }
