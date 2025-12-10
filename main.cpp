@@ -8,6 +8,10 @@
 
 using namespace std;
 
+struct Snake;
+struct Fruit;
+struct Map;
+
 enum eDirection { STOP, UP, DOWN, LEFT, RIGHT };
 
 termios oldt, newt;
@@ -35,34 +39,47 @@ int kbhit()
 
 struct Snake
 {
-    char x, y;
+    unsigned char x, y;
+    bool operator==(const Snake& other) const
+    {
+        return x == other.x && y == other.y;
+    }
 };
 struct Fruit
 {
-    char x, y;
+    unsigned char x, y;
 };
+struct Map
+{
+    unsigned char x, y;
+};
+bool operator==(const Map& m, const Fruit& f) {return m.x == f.x && m.y == f.y;}
+bool operator==(const Map& m, const Snake& s) {return m.x == s.x && m.y == s.y;}
+bool operator==(const Snake& s, const Map& m) {return s.x == m.x && s.y == m.y;}
+bool operator==(const Fruit& f, const Map& m) {return f.x == m.x && f.y == m.y;}
+bool operator==(const Snake& s, const Fruit& f) {return s.x == f.x && s.y == f.y;}
+bool operator==(const Fruit& f, const Snake& s) {return f.x == s.x && f.y == s.y;}
 
-void Draw(char* ptrMap,
-    short X,
-    short Y,
+void Draw(unsigned char* ptrMap,
+    const Map MAPCOORDINATES,
     Snake snakeHead,
     Fruit fruit,
-    char FPS,
-    char* map,
+    unsigned char FPS,
+    unsigned char* map,
     Snake tail[],
     short tailLength
     )
 {
     ptrMap = map;
     bool isTailSegmentDraw;
-    for (int y = 0; y <= Y; y++)
+    for (int y = 0; y <= MAPCOORDINATES.y; y++)
     {
-        for (int x = 0; x <= X; x++)
+        for (int x = 0; x <= MAPCOORDINATES.x; x++)
         {
-            if (y == 0 || y == Y || x == 0 || x == X)
+            if (y == 0 || y == MAPCOORDINATES.y || x == 0 || x == MAPCOORDINATES.x)
             {
                 *(ptrMap++) = '#';
-                if (x == X)
+                if (x == MAPCOORDINATES.x)
                 {
                     *(ptrMap++) = '\n';
                 }
@@ -123,28 +140,28 @@ void buttonPressed(char& dir)
     }
 }
 
-void changeDirection(char& dir, char& snakeHeadX, char& snakeHeadY)
+void changeDirection(char& dir, Snake& snakeHead)
 {
     switch (dir)
     {
         case eDirection::LEFT:
-            snakeHeadX--;
+            snakeHead.x--;
             break;
         case eDirection::RIGHT:
-            snakeHeadX++;
+            snakeHead.x++;
             break;
         case eDirection::UP:
-            snakeHeadY--;
+            snakeHead.y--;
             break;
         case eDirection::DOWN:
-            snakeHeadY++;
+            snakeHead.y++;
             break;
     }
 }
 
-bool isLoose(char snakeHeadX,char snakeHeadY, short X, short Y)
+bool isLoose(Snake snakeHead, Map MAPCOORDINATES)
 {
-    if (snakeHeadX == 0 || snakeHeadX == X || snakeHeadY == Y || snakeHeadY == 0)
+    if (snakeHead.x == 0 || snakeHead.x == MAPCOORDINATES.x || snakeHead.y == MAPCOORDINATES.y || snakeHead.y == 0)
     {
         return true;
     } else {return false;}
@@ -164,46 +181,42 @@ void moveTail(Snake tail[], short tailLength, Snake snakeHead)
     }
 }
 
-void generateFruitPosition(const char mapX, const char mapY, Fruit& fruit)
+void generateFruitPosition(const Map MAP, Fruit& fruit, Snake tail[], short tailLength)
 {
     random_device rd;
     mt19937 mt(rd());
 
-    uniform_int_distribution<int> distX(1, mapX-1);
-    uniform_int_distribution<int> distY(1, mapY-1);
-
-    fruit.x = distX(mt);
-    fruit.y = distY(mt);
+    uniform_int_distribution<int> distX(1, MAP.x-1);
+    uniform_int_distribution<int> distY(1, MAP.y-1);
 }
 
-void wasEaten(Snake snakeHead, Fruit& fruit, short& tailLength, const char mapX,
-    const char mapY)
+
+void wasEaten(Snake snakeHead, Fruit& fruit, short& tailLength, const Map MAPCOORDINATES)
 {
-    if (snakeHead.x == fruit.x && snakeHead.y == fruit.y)
+    if (snakeHead == fruit)
     {
         tailLength++;
-        generateFruitPosition(mapX, mapY, fruit);
+        generateFruitPosition(MAPCOORDINATES, fruit);
     }
 }
 
 int main()
 {
     initTermios();
-    const char FPS = 10;
+    const unsigned char FPS = 10;
 
-    const char mapX = 30;
-    const char mapY = 30;
-    char* map = new char[(mapX+2)*(mapY+2)];
-    char* ptrMap = map;
+    const Map MAPCOORDINATES{30,30};
+    unsigned char* map = new unsigned char[(MAPCOORDINATES.x+2)*(MAPCOORDINATES.y+2)];
+    unsigned char* ptrMap = map;
 
     Snake snakeHead;
     Fruit fruit;
-    Snake tail[(mapX-1) * (mapY-1)];
+    Snake tail[(MAPCOORDINATES.x-1) * (MAPCOORDINATES.y-1)];
 
-    generateFruitPosition(mapX, mapY, fruit);
+    generateFruitPosition(MAPCOORDINATES, fruit);
 
-    snakeHead.x = mapX/2;
-    snakeHead.y = mapY/2;
+    snakeHead.x = MAPCOORDINATES.x/2;
+    snakeHead.y = MAPCOORDINATES.y/2;
 
     char dir = eDirection::STOP;
     short tailLength = 0;
@@ -212,14 +225,11 @@ int main()
     {
         buttonPressed(dir);
         moveTail(tail, tailLength, snakeHead);
-        changeDirection(dir, snakeHead.x, snakeHead.y);
+        changeDirection(dir, snakeHead);
         cout << "Score: "<<tailLength<< endl;
-        if (isLoose(snakeHead.x, snakeHead.y, mapX, mapY))
-        {
-            break;
-        }
-        wasEaten(snakeHead, fruit, tailLength, mapX, mapY);
-        Draw(ptrMap, mapX, mapY, snakeHead, fruit, FPS, map, tail, tailLength);
+        if (isLoose(snakeHead, MAPCOORDINATES)) break;
+        wasEaten(snakeHead, fruit, tailLength, MAPCOORDINATES);
+        Draw(ptrMap, MAPCOORDINATES, snakeHead, fruit, FPS, map, tail, tailLength);
     }
 
     delete[] map;
