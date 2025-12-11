@@ -2,9 +2,15 @@
 #include <random>
 #include <chrono>
 #include <thread>
-#include <termios.h>
-#include <sys/select.h>
 
+
+#ifdef _WIN32
+    #include <conio.h>
+    #include <windows.h>
+#elif __APPLE__
+    #include <termios.h>
+    #include <sys/select.h>
+#endif
 
 using namespace std;
 
@@ -14,6 +20,9 @@ struct Map;
 
 enum eDirection { STOP, UP, DOWN, LEFT, RIGHT };
 
+#ifdef _WIN32
+
+#elif __APPLE__
 termios oldt, newt;
 void initTermios()
 {
@@ -36,14 +45,13 @@ int kbhit()
     FD_SET(0, &fds);
     return select(1, &fds, NULL, NULL, &tv) > 0;
 }
+#endif
+
 
 struct Snake
 {
     unsigned char x, y;
-    bool operator==(const Snake& other) const
-    {
-        return x == other.x && y == other.y;
-    }
+    bool operator==(const Snake& s) { return x == s.x && y == s.y; }                            
 };
 struct Fruit
 {
@@ -59,6 +67,22 @@ bool operator==(const Snake& s, const Map& m) {return s.x == m.x && s.y == m.y;}
 bool operator==(const Fruit& f, const Map& m) {return f.x == m.x && f.y == m.y;}
 bool operator==(const Snake& s, const Fruit& f) {return s.x == f.x && s.y == f.y;}
 bool operator==(const Fruit& f, const Snake& s) {return f.x == s.x && f.y == s.y;}
+
+void ClearTerminal() 
+{
+#ifdef _WIN32
+    COORD coord = { 0,0 };
+    DWORD count;
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(h, &csbi);
+    FillConsoleOutputCharacter(h, ' ', csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
+    FillConsoleOutputAttribute(h, csbi.wAttributes, csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
+    SetConsoleCursorPosition(h, coord);
+#elif __APPLE__
+    cout << "\033[2J\033[1;1H" << map;
+#endif
+}
 
 void Draw(unsigned char* ptrMap,
     const Map MAPCOORDINATES,
@@ -111,14 +135,33 @@ void Draw(unsigned char* ptrMap,
     }
         *(ptrMap++) = '\0';
         this_thread::sleep_for(chrono::milliseconds(1000/FPS));
-        cout << "\033[2J\033[1;1H"<<map;
+        ClearTerminal();
 }
 
+int myKbhit() 
+{
+#ifdef _WIN32
+    return _kbhit();
+#elif __APPLE__
+    return kbhit();
+#endif
+}
+
+int myGetchr()
+{
+#ifdef _WIN32
+    return _getch();
+#elif __APPLE__
+    return getchar();
+#endif
+}
+ 
 void buttonPressed(char& dir)
 {
-    if (kbhit())
+
+    if (myKbhit())
     {
-        switch (getchar())
+        switch (myGetchr())
         {
             case 'a':
             case 'A':
@@ -202,7 +245,9 @@ void wasEaten(Snake snakeHead, Fruit& fruit, short& tailLength, const Map MAPCOO
 
 int main()
 {
+#ifdef __APPLE__
     initTermios();
+#endif
     const unsigned char FPS = 10;
 
     const Map MAPCOORDINATES{30,30};
@@ -233,6 +278,8 @@ int main()
     }
 
     delete[] map;
+#ifdef __APPLE__
     resetTermios();
+#endif
     return 0;
 }
