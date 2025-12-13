@@ -168,18 +168,22 @@ void buttonPressed(char& dir)
         {
             case 'a':
             case 'A':
+                if(dir == eDirection::RIGHT) break;
                 dir = eDirection::LEFT;
                 break;
             case 'd':
             case 'D':
+                if (dir == eDirection::LEFT) break;
                 dir = eDirection::RIGHT;
                 break;
             case 'w':
             case 'W':
+                if (dir == eDirection::DOWN) break;
                 dir = eDirection::UP;
                 break;
             case 's':
             case 'S':
+                if (dir == eDirection::UP) break;
                 dir = eDirection::DOWN;
                 break;
         }
