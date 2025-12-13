@@ -76,17 +76,13 @@ bool operator==(const Fruit& f, const Map& m) {return f.x == m.x && f.y == m.y;}
 bool operator==(const Snake& s, const Fruit& f) {return s.x == f.x && s.y == f.y;}
 bool operator==(const Fruit& f, const Snake& s) {return f.x == s.x && f.y == s.y;}
 
-void ClearTerminal() 
+void ClearTerminal(unsigned char* map)
 {
 #ifdef _WIN32
-    COORD coord = { 0,0 };
-    DWORD count;
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleScreenBufferInfo(h, &csbi);
-    FillConsoleOutputCharacter(h, ' ', csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
-    FillConsoleOutputAttribute(h, csbi.wAttributes, csbi.dwSize.X * csbi.dwSize.Y, coord, &count);
-    SetConsoleCursorPosition(h, coord);
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coord = { 0, 0 }; 
+    SetConsoleCursorPosition(hOut, coord);
+    cout << map;
 #elif __APPLE__
     cout << "\033[2J\033[1;1H" << map;
 #endif
@@ -142,7 +138,7 @@ void Draw(unsigned char* ptrMap,
     }
         *(ptrMap++) = '\0';
         this_thread::sleep_for(chrono::milliseconds(1000/FPS));
-        ClearTerminal();
+        ClearTerminal(map);
 }
 
 int myKbhit() 
