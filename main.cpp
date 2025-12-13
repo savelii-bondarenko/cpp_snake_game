@@ -52,7 +52,7 @@ int kbhit()
 struct Snake
 {
     unsigned char x, y;
-    bool operator==(const Snake& s) { return x == s.x && y == s.y; }                            
+    bool operator==(const Snake& s) const { return x == s.x && y == s.y; }                            
 };
 struct Map
 {
@@ -61,7 +61,7 @@ struct Map
 struct Fruit
 {
     unsigned char x, y;
-    Fruit& operator=(const Map& m) 
+    Fruit& operator=(const Map& m)
     { 
         x = m.x;
         y = m.y; 
@@ -209,12 +209,15 @@ void changeDirection(char& dir, Snake& snakeHead)
     }
 }
 
-bool isLoose(Snake snakeHead, Map MAPCOORDINATES)
+bool isLoose(const Snake snakeHead, const Map MAPCOORDINATES, const vector<Snake>& tail)
 {
-    if (snakeHead.x == 0 || snakeHead.x == MAPCOORDINATES.x || snakeHead.y == MAPCOORDINATES.y || snakeHead.y == 0)
+    if (snakeHead.x == 0 || snakeHead.x == MAPCOORDINATES.x || snakeHead.y == MAPCOORDINATES.y
+        || snakeHead.y == 0) return true;
+    for (int i = 0; i < tail.size(); i++) 
     {
-        return true;
-    } else {return false;}
+        if (snakeHead == tail[i]) return true;
+    }
+    return false;
 }
 
 void moveTail(vector<Snake>& tail, Snake snakeHead)
@@ -306,7 +309,7 @@ int main()
         moveTail(tail, snakeHead);
         changeDirection(dir, snakeHead);
         cout << "Score: "<< tail.size() << endl;
-        if (isLoose(snakeHead, MAPCOORDINATES)) break;
+        if (isLoose(snakeHead, MAPCOORDINATES, tail)) break;
         Draw(ptrMap, MAPCOORDINATES, snakeHead, fruit, FPS, map, tail);
         GetFreeSpeceFromMap(map, MAPCOORDINATES, ptrMap, freeSpace);
         wasEaten(snakeHead, fruit, freeSpace, mt, tail);
