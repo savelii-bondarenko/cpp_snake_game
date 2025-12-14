@@ -21,9 +21,7 @@ struct Map;
 
 enum eDirection { STOP, UP, DOWN, LEFT, RIGHT };
 
-#ifdef _WIN32
-
-#elif __APPLE__
+#ifdef __APPLE__
 termios oldt, newt;
 void initTermios()
 {
@@ -94,7 +92,7 @@ void Draw(unsigned char* ptrMap,
     Fruit fruit,
     unsigned char FPS,
     unsigned char* map,
-    vector<Snake> tail
+    const vector<Snake>& tail
     )
 {
     ptrMap = map;
