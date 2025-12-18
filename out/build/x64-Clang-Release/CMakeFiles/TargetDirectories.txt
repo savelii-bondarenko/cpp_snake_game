@@ -1,3 +1,0 @@
-E:/cpp_snake_game/out/build/x64-Clang-Release/CMakeFiles/cpp_snake_game.dir
-E:/cpp_snake_game/out/build/x64-Clang-Release/CMakeFiles/edit_cache.dir
-E:/cpp_snake_game/out/build/x64-Clang-Release/CMakeFiles/rebuild_cache.dir
